@@ -1,0 +1,123 @@
+from flask import Flask, send_from_directory, request
+from flask_socketio import SocketIO, emit, join_room, leave_room
+import threading
+
+app = Flask(__name__, static_folder='')
+app.config['SECRET_KEY'] = 'dev'
+socketio = SocketIO(app, cors_allowed_origins='*')
+
+# Game state
+players = []  # list of {'sid', 'name'} in join order
+stories = {}  # origin_sid -> list of strings (turns)
+current_round = None
+submissions = {}  # dest_sid -> {'origin': origin_sid, 'text': text}
+game_lock = threading.Lock()
+
+
+@app.route('/')
+def index():
+	return send_from_directory('', 'index.html')
+
+
+@socketio.on('connect')
+def on_connect():
+	emit('player_list', [{'sid': p['sid'], 'name': p['name']} for p in players])
+
+
+@socketio.on('join')
+def on_join(data):
+	name = data.get('name', 'Anonymous')
+	sid = request.sid
+	# prevent duplicate joins
+	with game_lock:
+		if any(p['sid'] == sid for p in players):
+			return
+		players.append({'sid': sid, 'name': name})
+		emit('player_list', [{'sid': p['sid'], 'name': p['name']} for p in players], broadcast=True)
+		emit('joined', {'sid': sid, 'name': name})
+
+
+@socketio.on('start_game')
+def on_start_game():
+	global current_round, stories, submissions
+	with game_lock:
+		if current_round is not None:
+			emit('error', {'message': 'Game already started'})
+			return
+		if len(players) < 1:
+			emit('error', {'message': 'Need at least one player'})
+			return
+		# initialize
+		current_round = 0
+		submissions = {}
+		stories = {p['sid']: [] for p in players}
+		# send initial prompts (empty prompt, origin = player's own sid)
+		for p in players:
+			socketio.emit('prompt', {'round': current_round, 'text': '', 'origin': p['sid']}, room=p['sid'])
+
+
+@socketio.on('submit_turn')
+def on_submit_turn(data):
+	global current_round, submissions
+	sid = request.sid
+	text = data.get('text', '')
+	origin = data.get('origin')
+	with game_lock:
+		if current_round is None:
+			emit('error', {'message': 'Game has not started'})
+			return
+		# append this contribution to the proper origin story
+		if origin not in stories:
+			stories[origin] = []
+		stories[origin].append(text)
+
+		# figure out destination: next player in players list after the submitter
+		# find index of submitter
+		idx = next((i for i, p in enumerate(players) if p['sid'] == sid), None)
+		if idx is None:
+			emit('error', {'message': 'Player not in game'})
+			return
+		dest_idx = (idx + 1) % len(players)
+		dest_sid = players[dest_idx]['sid']
+		submissions[dest_sid] = {'origin': origin, 'text': text}
+
+		# notify that we've received a submission
+		emit('round_submitted', {'from': sid, 'to': dest_sid})
+
+		# if all players have submitted, advance
+		if len(submissions) >= len(players):
+			total_rounds = len(players)
+			# if we've completed the final round, send results
+			if current_round + 1 >= total_rounds:
+				# broadcast results: stories mapping origin -> list of turns
+				socketio.emit('results', {'stories': stories})
+				# reset game state
+				current_round = None
+				submissions = {}
+			else:
+				# prepare next prompts for each player
+				next_prompts = {}
+				for dest, payload in submissions.items():
+					next_prompts[dest] = payload
+				submissions = {}
+				current_round += 1
+				for p in players:
+					payload = next_prompts.get(p['sid'], {'origin': p['sid'], 'text': ''})
+					socketio.emit('prompt', {'round': current_round, 'text': payload['text'], 'origin': payload['origin']}, room=p['sid'])
+
+
+@socketio.on('disconnect')
+def on_disconnect():
+	sid = request.sid
+	with game_lock:
+		# remove player
+		for i, p in enumerate(players):
+			if p['sid'] == sid:
+				players.pop(i)
+				break
+		socketio.emit('player_list', [{'sid': p['sid'], 'name': p['name']} for p in players])
+
+
+if __name__ == '__main__':
+	socketio.run(app, host='0.0.0.0', port=5000)
+

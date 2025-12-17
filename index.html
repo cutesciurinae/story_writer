@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Local Story Phone</title>
+	<link rel="stylesheet" href="style.css">
+	<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+	<script defer src="script.js"></script>
+</head>
+<body>
+	<main>
+		<section id="lobby">
+			<h1>Local Story Phone</h1>
+			<label for="name">Your name</label>
+			<input id="name" placeholder="Enter your name" />
+			<button id="joinBtn">Join</button>
+			<div id="playersList" class="card"></div>
+			<button id="startBtn" class="muted">Start Game</button>
+		</section>
+
+		<section id="writing" class="hidden">
+			<h2>Round <span id="roundNum">0</span></h2>
+			<div id="promptCard" class="card small">
+				<strong>Prompt:</strong>
+				<div id="promptText" class="prompt"></div>
+			</div>
+			<textarea id="entry" placeholder="Continue the story..." autofocus></textarea>
+			<button id="submitBtn">Submit Turn</button>
+		</section>
+
+		<section id="waiting" class="hidden">
+			<h2>Waiting for others...</h2>
+			<div id="waitingList" class="card"></div>
+		</section>
+
+		<section id="results" class="hidden">
+			<h2>Results</h2>
+			<div id="resultsContainer" class="card"></div>
+			<button id="backToLobby">Back to Lobby</button>
+		</section>
+	</main>
+</body>
+</html>
+
