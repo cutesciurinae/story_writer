@@ -160,11 +160,15 @@ socket.on('results', (data) => {
 	// data.stories: origin -> [turns]
 	resultsContainer.innerHTML = '';
 	const stories = data.stories || {};
+	const players = data.players || [];
+	const playerMap = {};
+	players.forEach(p => { playerMap[p.sid] = p.name; });
 	Object.keys(stories).forEach((origin) => {
 		const card = document.createElement('div');
 		card.className = 'story card';
 		const header = document.createElement('h3');
-		header.textContent = origin;
+		const displayName = playerMap[origin] || origin;
+		header.textContent = displayName;
 		card.appendChild(header);
 		const body = document.createElement('div');
 		body.textContent = stories[origin].join('\n\n');

@@ -104,7 +104,10 @@ def on_submit_turn(data):
 			# if we've completed the final round, send results
 			if current_round + 1 >= max_rounds:
 				# broadcast results: stories mapping origin -> list of turns
-				socketio.emit('results', {'stories': stories})
+				socketio.emit('results', {
+					'stories': stories,
+					'players': [{'sid': p['sid'], 'name': p['name']} for p in players]
+				})
 				# reset game state
 				current_round = None
 				submissions = {}
