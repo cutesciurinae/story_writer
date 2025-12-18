@@ -36,5 +36,41 @@ The primary goal is to allow for **unlimited writing length** per turn.
 - `stories`: Dictionary where keys are player IDs and values are arrays of strings (turns).
 - `current_round`: Integer tracking the game progress.
 
+## 💿 Installation
+
+Quick setup to run locally. Two helper scripts are provided: `install.sh` (Unix/macOS) and `install.ps1` (Windows PowerShell).
+
+Prerequisites: Python 3.8+ installed and available on `PATH`.
+
+Unix / macOS (manual):
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python server.py
+```
+
+Windows PowerShell (manual):
+```powershell
+python -m venv .venv
+. .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python server.py
+```
+
+Or run the platform-specific installer script from the project root (these will check for Python, create a `.venv`, install dependencies, and start the server):
+
+Unix / macOS:
+```bash
+./install.sh
+```
+
+Windows PowerShell (run in PowerShell):
+```powershell
+.\install.ps1
+```
+
+If you prefer to use the provided scripts but need to customize paths or Python interpreter names (e.g. `python3`), edit the script accordingly.
+
 ## 🚀 Instruction for Copilot
 When writing code, refer to the "Story Mode" logic. Focus on high-character-limit text areas and ensuring that each story moves to the next player in a circular queue.
