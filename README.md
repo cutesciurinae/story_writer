@@ -8,11 +8,22 @@ The primary goal is to allow for **unlimited writing length** per turn.
 - **Frontend:** Vanilla JavaScript, HTML5 Canvas, CSS3
 - **Communication:** WebSockets for real-time turn transitions
 
-## 🎮 Game Logic (Story Mode)
-1. **Lobby:** Players join via local IP.
-2. **Turn 1:** Everyone writes a long starting story snippet.
-3. **Turn X:** Players receive the *text* from the previous player and must continue the story.
-4. **End:** All stories are displayed in full for everyone to read.
+## ⚙️ Game Settings (Configurable)
+- **Max Rounds:** How many times the stories circulate.
+- **Time Limit:** Seconds allowed per writing turn (0 for infinite).
+- **Text Limit:** Maximum character count for each entry.
+
+## 🔄 Game Flow
+1. **Lobby:** Host sets "Game Settings".
+2. **Sync:** Server broadcasts settings to all clients.
+3. **Turn Loop:** - Timer starts based on `time_limit`.
+    - Textarea enforces `text_limit`.
+    - On timer end or manual submit: story moves to the next player.
+4. **End:** Stories are displayed when `current_round == max_rounds`
+
+## 🏗 Data Structure
+- `game_settings`: {rounds: int, time: int, char_limit: int}
+- `game_state`: {players: [], stories: {}, current_round: 0}
 
 ## 🏗 Project Structure
 - `server.py`: Flask-SocketIO server handling game state, player list, and turn routing.

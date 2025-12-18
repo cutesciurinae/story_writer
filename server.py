@@ -12,6 +12,7 @@ stories = {}  # origin_sid -> list of strings (turns)
 current_round = None
 submissions = {}  # dest_sid -> {'origin': origin_sid, 'text': text}
 game_lock = threading.Lock()
+game_settings = None
 
 
 @app.route('/')
@@ -38,8 +39,13 @@ def on_join(data):
 
 
 @socketio.on('start_game')
-def on_start_game():
-	global current_round, stories, submissions
+def on_start_game(data):
+	global current_round, stories, submissions, game_settings
+	settings_raw = (data or {}).get('settings', {}) if isinstance(data, dict) else {}
+	# normalize settings with defaults
+	rounds = int(settings_raw.get('rounds') or settings_raw.get('round') or 0)
+	time_limit = int(settings_raw.get('time_limit') or settings_raw.get('time') or 0)
+	char_limit = int(settings_raw.get('char_limit') or settings_raw.get('text_limit') or 0)
 	with game_lock:
 		if current_round is not None:
 			emit('error', {'message': 'Game already started'})
@@ -47,10 +53,18 @@ def on_start_game():
 		if len(players) < 1:
 			emit('error', {'message': 'Need at least one player'})
 			return
+		# set game settings (use players count as default rounds if rounds <= 0)
+		game_settings = {
+			'rounds': rounds if rounds > 0 else len(players),
+			'time_limit': time_limit,
+			'char_limit': char_limit
+		}
 		# initialize
 		current_round = 0
 		submissions = {}
 		stories = {p['sid']: [] for p in players}
+		# broadcast that game started with settings
+		socketio.emit('game_started', {'settings': game_settings})
 		# send initial prompts (empty prompt, origin = player's own sid)
 		for p in players:
 			socketio.emit('prompt', {'round': current_round, 'text': '', 'origin': p['sid']}, room=p['sid'])
@@ -58,7 +72,7 @@ def on_start_game():
 
 @socketio.on('submit_turn')
 def on_submit_turn(data):
-	global current_round, submissions
+	global current_round, submissions, game_settings
 	sid = request.sid
 	text = data.get('text', '')
 	origin = data.get('origin')
@@ -86,14 +100,15 @@ def on_submit_turn(data):
 
 		# if all players have submitted, advance
 		if len(submissions) >= len(players):
-			total_rounds = len(players)
+			max_rounds = (game_settings['rounds'] if game_settings else len(players))
 			# if we've completed the final round, send results
-			if current_round + 1 >= total_rounds:
+			if current_round + 1 >= max_rounds:
 				# broadcast results: stories mapping origin -> list of turns
 				socketio.emit('results', {'stories': stories})
 				# reset game state
 				current_round = None
 				submissions = {}
+				game_settings = None
 			else:
 				# prepare next prompts for each player
 				next_prompts = {}

@@ -16,6 +16,15 @@
 			<input id="name" placeholder="Enter your name" />
 			<button id="joinBtn">Join</button>
 			<div id="playersList" class="card"></div>
+			<div id="settingsPanel" class="card small">
+				<h3>Game Settings</h3>
+				<label for="roundsInput">Rounds</label>
+				<input id="roundsInput" type="number" min="1" value="5">
+				<label for="timeLimitInput">Time Limit (seconds, 0 = infinite)</label>
+				<input id="timeLimitInput" type="number" min="0" value="60">
+				<label for="charLimitInput">Character Limit (per entry, 0 = unlimited)</label>
+				<input id="charLimitInput" type="number" min="0" value="500">
+			</div>
 			<button id="startBtn" class="muted">Start Game</button>
 		</section>
 
@@ -26,6 +35,10 @@
 				<div id="promptText" class="prompt"></div>
 			</div>
 			<textarea id="entry" placeholder="Continue the story..." autofocus></textarea>
+			<div class="meta">
+				<span id="charsRemaining"></span>
+				<span id="timerDisplay" style="float:right"></span>
+			</div>
 			<button id="submitBtn">Submit Turn</button>
 		</section>
 
