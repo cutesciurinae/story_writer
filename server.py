@@ -127,22 +127,23 @@ def on_submit_turn(data):
 				submissions = {}
 				game_settings = None
 			else:
-						# notify that we've received a submission and save stories after every round
-						emit('round_submitted', {'from': sid, 'to': dest_sid})
+				# notify that we've received a submission and save stories after every round
+				emit('round_submitted', {'from': sid, 'to': dest_sid})
 
-						# Save stories after every round
-						import os
-						save_dir = os.path.join(os.path.dirname(__file__), 'stories')
-						if not os.path.exists(save_dir):
-							os.makedirs(save_dir)
-						for origin_sid, turns in stories.items():
-							name = next((p['name'] for p in players if p['sid'] == origin_sid), origin_sid)
-							filename = f"story_{name}_{origin_sid}_round{current_round+1}.txt"
-							filepath = os.path.join(save_dir, filename)
-							with open(filepath, 'w', encoding='utf-8') as f:
-								f.write(f"Story for {name} ({origin_sid}) up to round {current_round+1}:\n\n")
-								for i, turn in enumerate(turns):
-									f.write(f"Round {i+1}:\n{turn}\n\n")
+				# Save stories after every round
+				import os
+				save_dir = os.path.join(os.path.dirname(__file__), 'stories')
+				if not os.path.exists(save_dir):
+					os.makedirs(save_dir)
+				for origin_sid, turns in stories.items():
+					name = next((p['name'] for p in players if p['sid'] == origin_sid), origin_sid)
+					filename = f"story_{name}_{origin_sid}_round{current_round+1}.txt"
+					filepath = os.path.join(save_dir, filename)
+					with open(filepath, 'w', encoding='utf-8') as f:
+						f.write(f"Story for {name} ({origin_sid}) up to round {current_round+1}:\n\n")
+						for i, turn in enumerate(turns):
+							f.write(f"Round {i+1}:\n{turn}\n\n")
+				next_prompts = {}
 				for dest, payload in submissions.items():
 					next_prompts[dest] = payload
 				submissions = {}
