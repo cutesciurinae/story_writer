@@ -98,7 +98,7 @@ def on_submit_turn(data):
 		# notify that we've received a submission
 		emit('round_submitted', {'from': sid, 'to': dest_sid})
 
-		# if all players have submitted, advance
+		# check if all players have submitted
 		if len(submissions) >= len(players):
 			max_rounds = (game_settings['rounds'] if game_settings else len(players))
 			# if we've completed the final round, send results

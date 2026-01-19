@@ -30,6 +30,7 @@ let currentPromptOrigin = null;
 let gameSettings = { rounds: 5, time_limit: 60, char_limit: 500 };
 let roundTimer = null;
 let timeLeft = 0;
+let playersWaiting = {}; // Track who has submitted: sid -> true
 
 function show(el) { el.classList.remove('hidden'); }
 function hide(el) { el.classList.add('hidden'); }
@@ -121,6 +122,8 @@ socket.on('player_list', (list) => {
 
 socket.on('prompt', (data) => {
 	// data: {round, text, origin}
+	// Reset waiting state for new round
+	playersWaiting = {};
 	currentPromptOrigin = data.origin;
 	roundNum.textContent = data.round;
 	promptText.textContent = data.text || '(Write a starting snippet)';
@@ -150,11 +153,22 @@ socket.on('prompt', (data) => {
 	show(writingEl);
 });
 
-socket.on('round_submitted', () => {
+socket.on('round_submitted', (data) => {
 	// show waiting list state could be improved
 	hide(writingEl);
 	show(waitingEl);
+	// Mark that this player has submitted
+	if (data.from) {
+		playersWaiting[data.from] = true;
+	}
+	// Update waiting list display
+	updateWaitingList(data);
 });
+
+function updateWaitingList(data) {
+	if (!data) return;
+	waitingList.innerHTML = '<p>Waiting for other players...</p>';
+}
 
 socket.on('results', (data) => {
 	// data.stories: origin -> [turns]
