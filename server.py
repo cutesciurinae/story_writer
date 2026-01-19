@@ -80,10 +80,10 @@ def on_submit_turn(data):
 		if current_round is None:
 			emit('error', {'message': 'Game has not started'})
 			return
-		# append this contribution to the proper origin story
+		# append this contribution to the proper origin story, tracking contributor
 		if origin not in stories:
 			stories[origin] = []
-		stories[origin].append(text)
+		stories[origin].append({'text': text, 'contributor': sid})
 
 		# figure out destination: next player in players list after the submitter
 		# find index of submitter
@@ -103,7 +103,7 @@ def on_submit_turn(data):
 			max_rounds = (game_settings['rounds'] if game_settings else len(players))
 			# if we've completed the final round, send results
 			if current_round + 1 >= max_rounds:
-				# broadcast results: stories mapping origin -> list of turns
+				# broadcast results: stories mapping origin -> list of turns with contributor info
 				socketio.emit('results', {
 					'stories': stories,
 					'players': [{'sid': p['sid'], 'name': p['name']} for p in players]

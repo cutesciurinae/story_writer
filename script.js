@@ -171,24 +171,109 @@ function updateWaitingList(data) {
 }
 
 socket.on('results', (data) => {
-	// data.stories: origin -> [turns]
+	// Enhanced results: show contributor for each part, add step-by-step mode
 	resultsContainer.innerHTML = '';
 	const stories = data.stories || {};
 	const players = data.players || [];
 	const playerMap = {};
 	players.forEach(p => { playerMap[p.sid] = p.name; });
-	Object.keys(stories).forEach((origin) => {
+
+	// Step-by-step mode state
+	let storyOrder = Object.keys(stories);
+	let currentStoryIdx = 0;
+	let currentTurnIdx = 0;
+	let stepMode = false;
+
+	function renderFullResults() {
+		resultsContainer.innerHTML = '';
+		storyOrder.forEach((origin) => {
+			const card = document.createElement('div');
+			card.className = 'story card';
+			const header = document.createElement('h3');
+			const displayName = playerMap[origin] || origin;
+			header.textContent = displayName;
+			card.appendChild(header);
+			const body = document.createElement('div');
+			body.innerHTML = '';
+			(stories[origin] || []).forEach((turn, idx) => {
+				const contribName = playerMap[turn.contributor] || turn.contributor;
+				const part = document.createElement('div');
+				part.className = 'story-part';
+				part.innerHTML = `<b>Round ${idx+1} (${contribName}):</b><br>${turn.text}`;
+				body.appendChild(part);
+			});
+			card.appendChild(body);
+			resultsContainer.appendChild(card);
+		});
+	}
+
+	function renderStepResults() {
+		resultsContainer.innerHTML = '';
+		const origin = storyOrder[currentStoryIdx];
+		const turns = stories[origin] || [];
+		const displayName = playerMap[origin] || origin;
 		const card = document.createElement('div');
 		card.className = 'story card';
 		const header = document.createElement('h3');
-		const displayName = playerMap[origin] || origin;
 		header.textContent = displayName;
 		card.appendChild(header);
 		const body = document.createElement('div');
-		body.textContent = stories[origin].join('\n\n');
+		body.innerHTML = '';
+		for (let i = 0; i <= currentTurnIdx && i < turns.length; i++) {
+			const turn = turns[i];
+			const contribName = playerMap[turn.contributor] || turn.contributor;
+			const part = document.createElement('div');
+			part.className = 'story-part';
+			part.innerHTML = `<b>Round ${i+1} (${contribName}):</b><br>${turn.text}`;
+			body.appendChild(part);
+		}
 		card.appendChild(body);
 		resultsContainer.appendChild(card);
-	});
+
+		// Navigation button
+		const nav = document.createElement('div');
+		nav.className = 'results-nav';
+		const nextBtn = document.createElement('button');
+		nextBtn.textContent = 'Next';
+		nextBtn.onclick = () => {
+			if (currentTurnIdx < turns.length - 1) {
+				currentTurnIdx++;
+				renderStepResults();
+			} else if (currentStoryIdx < storyOrder.length - 1) {
+				currentStoryIdx++;
+				currentTurnIdx = 0;
+				renderStepResults();
+			}
+		};
+		nav.appendChild(nextBtn);
+		// Optionally add a button to switch to full mode
+		const fullBtn = document.createElement('button');
+		fullBtn.textContent = 'Show All';
+		fullBtn.onclick = () => {
+			stepMode = false;
+			renderFullResults();
+		};
+		nav.appendChild(fullBtn);
+		resultsContainer.appendChild(nav);
+	}
+
+	// Mode switch buttons
+	const modeSwitch = document.createElement('div');
+	modeSwitch.className = 'results-mode-switch';
+	const stepBtn = document.createElement('button');
+	stepBtn.textContent = 'Step-by-step mode';
+	stepBtn.onclick = () => {
+		stepMode = true;
+		currentStoryIdx = 0;
+		currentTurnIdx = 0;
+		renderStepResults();
+	};
+	modeSwitch.appendChild(stepBtn);
+	resultsContainer.appendChild(modeSwitch);
+
+	// Default: show full results
+	renderFullResults();
+
 	hide(lobbyEl);
 	hide(writingEl);
 	hide(waitingEl);
