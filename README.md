@@ -36,13 +36,15 @@ The primary goal is to allow for **unlimited writing length** per turn.
 - `stories`: Dictionary where keys are player IDs and values are arrays of strings (turns).
 - `current_round`: Integer tracking the game progress.
 
+
 ## 💿 Installation
 
-Quick setup to run locally. Two helper scripts are provided: `install.sh` (Unix/macOS) and `install.ps1` (Windows PowerShell).
+Quick setup to run locally or in Docker. Two helper scripts are provided: `install.sh` (Unix/macOS) and `install.ps1` (Windows PowerShell).
 
+### Local (manual)
 Prerequisites: Python 3.8+ installed and available on `PATH`.
 
-Unix / macOS (manual):
+Unix / macOS:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -50,7 +52,7 @@ pip install -r requirements.txt
 python server.py
 ```
 
-Windows PowerShell (manual):
+Windows PowerShell:
 ```powershell
 python -m venv .venv
 . .\.venv\Scripts\Activate.ps1
@@ -58,19 +60,44 @@ pip install -r requirements.txt
 python server.py
 ```
 
-Or run the platform-specific installer script from the project root (these will check for Python, create a `.venv`, install dependencies, and start the server):
+Or run the platform-specific installer script from the project root:
 
 Unix / macOS:
 ```bash
 ./install.sh
 ```
 
-Windows PowerShell (run in PowerShell):
+Windows PowerShell:
 ```powershell
 .\install.ps1
 ```
 
-If you prefer to use the provided scripts but need to customize paths or Python interpreter names (e.g. `python3`), edit the script accordingly.
+### Docker Setup
+
+You can run the game in a Docker container for easy deployment:
+
+**Build and run with Docker:**
+```bash
+docker build -t story_writer .
+docker run -p 5000:5000 -v $(pwd)/stories:/app/stories story_writer
+```
+
+**Or use Docker Compose:**
+```bash
+docker-compose up --build
+```
+This will build the image and start the server on port 5000. All saved stories will be available in the `stories/` directory on your host.
+
+## 🧪 CI/CD Pipeline
+
+This project includes a GitHub Actions workflow for CI/CD:
+- Automatically runs on every push and pull request to the `main` branch
+- Installs dependencies and runs all tests (pytest)
+- Ensures code quality and prevents broken code from being merged
+
+## 📁 Story Saving Feature
+
+All stories are automatically saved as text files in the `stories/` directory after every round and at the end of the game. This prevents data loss if the game crashes or is interrupted.
 
 ## 🚀 Instruction for Copilot
 When writing code, refer to the "Story Mode" logic. Focus on high-character-limit text areas and ensuring that each story moves to the next player in a circular queue.

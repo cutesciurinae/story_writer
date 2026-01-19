@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  story_writer:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./stories:/app/stories
+    restart: unless-stopped
