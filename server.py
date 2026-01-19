@@ -186,16 +186,22 @@ def on_submit_turn(data):
 				socketio.emit('prompt', {'round': room['current_round'], 'text': payload['text'], 'origin': payload['origin']}, room=p['sid'])
 
 
+
 @socketio.on('disconnect')
 def on_disconnect():
 	sid = request.sid
-	with game_lock:
-		# remove player
-		for i, p in enumerate(players):
-			if p['sid'] == sid:
-				players.pop(i)
-				break
-		socketio.emit('player_list', [{'sid': p['sid'], 'name': p['name']} for p in players])
+	# Find the room this sid belongs to
+	room_code = None
+	for code, room in rooms.items():
+		if any(p['sid'] == sid for p in room['players']):
+			room_code = code
+			break
+	if not room_code:
+		return
+	room = rooms[room_code]
+	# Remove player from room
+	room['players'] = [p for p in room['players'] if p['sid'] != sid]
+	socketio.emit('player_list', [{'sid': p['sid'], 'name': p['name']} for p in room['players']], room=room_code)
 
 
 if __name__ == '__main__':
