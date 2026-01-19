@@ -2,7 +2,9 @@ const socket = io();
 
 // UI elements
 const lobbyEl = document.getElementById('lobby');
-const joinBtn = document.getElementById('joinBtn');
+const createRoomBtn = document.getElementById('createRoomBtn');
+const joinRoomBtn = document.getElementById('joinRoomBtn');
+const roomCodeInput = document.getElementById('roomCodeInput');
 const nameInput = document.getElementById('name');
 const playersList = document.getElementById('playersList');
 const startBtn = document.getElementById('startBtn');
@@ -35,9 +37,25 @@ let playersWaiting = {}; // Track who has submitted: sid -> true
 function show(el) { el.classList.remove('hidden'); }
 function hide(el) { el.classList.add('hidden'); }
 
-joinBtn.addEventListener('click', () => {
+
+createRoomBtn.addEventListener('click', () => {
 	const name = nameInput.value.trim() || 'Anonymous';
-	socket.emit('join', { name });
+	socket.emit('create_room', { name });
+});
+
+joinRoomBtn.addEventListener('click', () => {
+	const name = nameInput.value.trim() || 'Anonymous';
+	const room = roomCodeInput.value.trim().toUpperCase();
+	if (!room) {
+		alert('Please enter a room code.');
+		return;
+	}
+	socket.emit('join_room_code', { name, room });
+});
+
+// Optionally, allow joining by pressing Enter in the room code input
+roomCodeInput.addEventListener('keydown', (e) => {
+	if (e.key === 'Enter') joinRoomBtn.click();
 });
 
 startBtn.addEventListener('click', () => {
@@ -97,9 +115,20 @@ socket.on('connect', () => {
 	mySid = socket.id;
 });
 
+
+socket.on('room_created', (data) => {
+	if (data && data.room) {
+		roomCodeInput.value = data.room;
+		alert('Room created! Share this code: ' + data.room);
+	}
+});
+
 socket.on('joined', (data) => {
 	if (data && data.sid === mySid) {
 		// joined successfully
+		if (data.room) {
+			roomCodeInput.value = data.room;
+		}
 	}
 });
 
