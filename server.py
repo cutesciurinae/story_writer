@@ -1,13 +1,20 @@
-
 from flask import Flask, send_from_directory, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import threading
 import random
 import string
+import os
 
 app = Flask(__name__, static_folder='')
 app.config['SECRET_KEY'] = 'dev'
 socketio = SocketIO(app, cors_allowed_origins='*')
+
+# Disable debug mode in production
+def is_production():
+    return os.getenv("ENV") == "production"
+
+if is_production():
+    app.config['DEBUG'] = False
 
 # Room state: room_code -> {players, stories, current_round, submissions, game_settings, lock}
 rooms = {}
@@ -204,6 +211,8 @@ def on_disconnect():
 	socketio.emit('player_list', [{'sid': p['sid'], 'name': p['name']} for p in room['players']], room=room_code)
 
 
-if __name__ == '__main__':
-	socketio.run(app, host='0.0.0.0', port=5000)
+# Add DEV_MODE check to conditionally run app
+if __name__ == "__main__":
+    if os.getenv("DEV_MODE"):
+        app.run(host="0.0.0.0", port=4999, debug=True)
 
