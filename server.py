@@ -267,4 +267,4 @@ def on_disconnect():
 # Add DEV_MODE check to conditionally run app
 if __name__ == "__main__":
     if os.getenv("DEV_MODE"):
-        app.run(host="0.0.0.0", port=4999, debug=True)
+        app.run(host="0.0.0.0", port=13000, debug=True)

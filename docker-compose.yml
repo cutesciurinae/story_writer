@@ -3,7 +3,7 @@ services:
   story_writer:
     build: .
     ports:
-      - "4999:4999"
+      - "13000:13000"
     volumes:
       - ./stories:/app/stories
     restart: unless-stopped
