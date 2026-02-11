@@ -1,13 +1,19 @@
+import os
+import re
+from werkzeug.utils import secure_filename
 
 from flask import Flask, send_from_directory, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import threading
 import random
 import string
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__, static_folder='')
-app.config['SECRET_KEY'] = 'dev'
-socketio = SocketIO(app, cors_allowed_origins='*')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')  # Use environment variable
+socketio = SocketIO(app, cors_allowed_origins=['http://localhost:3000'])  # Restrict to trusted domains
+limiter = Limiter(get_remote_address, app=app)
 
 # Room state: room_code -> {players, stories, current_round, submissions, game_settings, lock}
 rooms = {}
@@ -15,22 +21,29 @@ rooms = {}
 def generate_room_code(length=6):
 	return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
+def validate_name(name):
+    if not name or not re.match(r'^[a-zA-Z0-9_]{1,20}$', name):
+        return 'Anonymous'
+    return name
+
+def validate_room_code(room_code):
+    if not room_code or not re.match(r'^[A-Z0-9]{6}$', room_code):
+        return None
+    return room_code
 
 @app.route('/')
 def index():
-	return send_from_directory('', 'index.html')
-
+    return send_from_directory('public', 'index.html')  # Use a fixed directory
 
 @socketio.on('connect')
 def on_connect():
 	pass  # No player list to emit until in a room
 
-
-
 # Create room
 @socketio.on('create_room')
+@limiter.limit("5 per minute")  # Limit to 5 requests per minute
 def on_create_room(data):
-	name = data.get('name', 'Anonymous')
+	name = validate_name(data.get('name', 'Anonymous'))
 	sid = request.sid
 	room_code = generate_room_code()
 	rooms[room_code] = {
@@ -48,8 +61,9 @@ def on_create_room(data):
 
 # Join room
 @socketio.on('join_room_code')
+@limiter.limit("5 per minute")
 def on_join_room_code(data):
-	name = data.get('name', 'Anonymous')
+	name = validate_name(data.get('name', 'Anonymous'))
 	room_code = data.get('room')
 	sid = request.sid
 	if not room_code or room_code not in rooms:
@@ -62,7 +76,6 @@ def on_join_room_code(data):
 	join_room(room_code)
 	emit('player_list', [{'sid': p['sid'], 'name': p['name']} for p in room['players']], room=room_code)
 	emit('joined', {'sid': sid, 'name': name, 'room': room_code})
-
 
 @socketio.on('start_game')
 def on_start_game(data):
@@ -99,8 +112,8 @@ def on_start_game(data):
 	for p in room['players']:
 		socketio.emit('prompt', {'round': room['current_round'], 'text': '', 'origin': p['sid']}, room=p['sid'])
 
-
 @socketio.on('submit_turn')
+@limiter.limit("10 per minute")
 def on_submit_turn(data):
 	sid = request.sid
 	# Find the room this sid belongs to
@@ -115,13 +128,18 @@ def on_submit_turn(data):
 	room = rooms[room_code]
 	text = data.get('text', '')
 	origin = data.get('origin')
-	if room['current_round'] is None:
-		emit('error', {'message': 'Game has not started'})
-		return
-	# append this contribution to the proper origin story, tracking contributor
-	if origin not in room['stories']:
-		room['stories'][origin] = []
-	room['stories'][origin].append({'text': text, 'contributor': sid})
+
+	# Sanitize file name
+	filename = secure_filename(f"story_{origin}_{sid}.txt")
+	save_dir = 'stories'
+	filepath = os.path.join(save_dir, filename)
+
+	# Ensure directory exists
+	os.makedirs(save_dir, exist_ok=True)
+
+	# Write to file
+	with open(filepath, 'w') as f:
+		f.write(text)
 
 	# figure out destination: next player in players list after the submitter
 	players = room['players']
@@ -185,8 +203,6 @@ def on_submit_turn(data):
 				payload = next_prompts.get(p['sid'], {'origin': p['sid'], 'text': ''})
 				socketio.emit('prompt', {'round': room['current_round'], 'text': payload['text'], 'origin': payload['origin']}, room=p['sid'])
 
-
-
 @socketio.on('disconnect')
 def on_disconnect():
 	sid = request.sid
@@ -203,7 +219,10 @@ def on_disconnect():
 	room['players'] = [p for p in room['players'] if p['sid'] != sid]
 	socketio.emit('player_list', [{'sid': p['sid'], 'name': p['name']} for p in room['players']], room=room_code)
 
+@socketio.on('error')
+def handle_error(data):
+    emit('error', {'message': 'An error occurred. Please try again.'})  # Generic error message
 
 if __name__ == '__main__':
-	socketio.run(app, host='0.0.0.0', port=4999, allow_unsafe_werkzeug=True)
+	socketio.run(app, host='0.0.0.0', port=4999)
 
