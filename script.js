@@ -40,7 +40,15 @@ function hide(el) { el.classList.add('hidden'); }
 
 createRoomBtn.addEventListener('click', () => {
 	const name = nameInput.value.trim() || 'Anonymous';
-	socket.emit('create_room', { name });
+	// Generate a random 6-character room code (A-Z, 0-9)
+	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+	let room_code = '';
+	for (let i = 0; i < 6; i++) room_code += chars.charAt(Math.floor(Math.random() * chars.length));
+	// Send the player's info as the first member in the players array
+	socket.emit('create_room', {
+		room_code,
+		players: [{ sid: socket.id, name }]
+	});
 });
 
 joinRoomBtn.addEventListener('click', () => {
