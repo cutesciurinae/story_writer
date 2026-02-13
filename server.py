@@ -1,3 +1,9 @@
+"""
+server.py
+
+This module implements the server-side logic for the story game application.
+"""
+
 import os
 import re
 import random
